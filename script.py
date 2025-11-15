@@ -1,7 +1,18 @@
+from dotenv import load_dotenv
+import os
+import requests
+
+load_dotenv()  # Loads API key from .env
+API_KEY = os.getenv("API_KEY")
 import requests
 
 API_URL = "https://api.openai.com/v1/chat/completions"
-API_KEY = "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"
+import os
+from dotenv import load_dotenv
+load_dotenv()
+
+API_KEY = os.getenv("API_KEY")
+
 
 SYSTEM_PROMPT = "You are a helpful, polite assistant."
 
