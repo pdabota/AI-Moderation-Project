@@ -1,55 +1,56 @@
-from dotenv import load_dotenv
 import os
 import requests
-
-load_dotenv()  # Loads API key from .env
-API_KEY = os.getenv("API_KEY")
-import requests
-
-API_URL = "https://api.openai.com/v1/chat/completions"
-import os
 from dotenv import load_dotenv
+
 load_dotenv()
 
 API_KEY = os.getenv("API_KEY")
 
+BANNED = ["kill", "bomb", "hack"]
 
-SYSTEM_PROMPT = "You are a helpful, polite assistant."
+def moderate(text):
+    lower = text.lower()
+    for bad in BANNED:
+        if bad in lower:
+            return False
+    return True
 
-BANNED = ["kill", "hack", "bomb"]
+def censor_output(text):
+    result = text
+    for bad in BANNED:
+        result = result.replace(bad, "[REDACTED]")
+    return result
 
-def violates(text):
-    text = text.lower()
-    return any(word in text for word in BANNED)
+while True:
+    user_prompt = input("Enter your prompt (or type 'exit' to quit): ")
 
-def redact(text):
-    for word in BANNED:
-        text = text.replace(word, "[REDACTED]")
-    return text
+    if user_prompt.lower() == "exit":
+        print("Goodbye!")
+        break
 
-user_prompt = input("Enter your prompt: ")
+    if not moderate(user_prompt):
+        print("Your input violated the moderation policy.")
+        continue
 
-if violates(user_prompt):
-    print("Your input violated the moderation policy.")
-else:
-    headers = {
-        "Authorization": f"Bearer {API_KEY}",
-        "Content-Type": "application/json"
-    }
-    body = {
-        "model": "gpt-4.1-mini",
+    payload = {
+        "model": "gpt-4o-mini",
         "messages": [
-            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "system", "content": "You are a friendly helpful assistant."},
             {"role": "user", "content": user_prompt}
         ]
     }
 
-    response = requests.post(API_URL, headers=headers, json=body).json()
-    ai_answer = response["choices"][0]["message"]["content"]
+    headers = {"Authorization": f"Bearer {API_KEY}"}
 
-    if violates(ai_answer):
-        print("⚠️ AI output had unsafe content. Showing safe version:")
-        print(redact(ai_answer))
+    response = requests.post(
+        "https://api.openai.com/v1/chat/completions",
+        json=payload,
+        headers=headers
+    )
+
+    ai_message = response.json()["choices"][0]["message"]["content"]
+
+    if not moderate(ai_message):
+        print("Your output violated the moderation policy.")
     else:
-        print("AI:", ai_answer)
-
+        print("AI:", censor_output(ai_message))
